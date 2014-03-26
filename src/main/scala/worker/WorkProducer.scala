@@ -14,6 +14,7 @@ object WorkProducer {
 class WorkProducer(frontend: ActorRef) extends Actor with ActorLogging {
   import WorkProducer._
   import context.dispatcher
+  import context._
   def scheduler = context.system.scheduler
   def rnd = ThreadLocalRandom.current
   def nextWorkId(): String = UUID.randomUUID().toString
@@ -26,23 +27,33 @@ class WorkProducer(frontend: ActorRef) extends Actor with ActorLogging {
   // override postRestart so we don't call preStart and schedule a new Tick
   override def postRestart(reason: Throwable): Unit = ()
 
-  def receive = {
+  def receive = producing
+
+  def producing: Receive = {
     case Tick =>
       n += 1
       log.info("Produced work: {}", n)
       val work = Work(nextWorkId(), n)
       frontend ! work
-      context.become(waitAccepted(work), discardOld = false)
+      //context.become(waitAccepted(work), discardOld = false)
+      context.become(waitAccepted(work))
 
   }
 
-  def waitAccepted(work: Work): Actor.Receive = {
+  def waitAccepted(work: Work): Receive = {
     case Frontend.Ok =>
-      context.unbecome()
-      scheduler.scheduleOnce(rnd.nextInt(3, 10).seconds, self, Tick)
+        context.become(waitResult)
     case Frontend.NotOk =>
       log.info("Work not accepted, retry after a while")
       scheduler.scheduleOnce(3.seconds, frontend, work)
+  }
+
+  def waitResult: Receive = {
+    case WorkResult(workId, result) => {
+      log.info("Received result: {}", result)
+      context.become(producing)
+      scheduler.scheduleOnce(rnd.nextInt(3, 10).seconds, self, Tick)
+    }
   }
 
 }

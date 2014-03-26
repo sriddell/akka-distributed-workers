@@ -18,9 +18,10 @@ class Frontend extends Actor {
   val mediator = DistributedPubSubExtension(context.system).mediator
 
   def receive = {
-    case work =>
+    case work: Work =>
       implicit val timeout = Timeout(5.seconds)
-      (mediator ? Send("/user/master/active", work, localAffinity = false)) map {
+      val workRequest = WorkRequest(work, sender)
+      (mediator ? Send("/user/master/active", workRequest, localAffinity = false)) map {
         case Master.Ack(_) => Ok
       } recover { case _ => NotOk } pipeTo sender
 

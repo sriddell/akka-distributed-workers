@@ -19,7 +19,7 @@ import akka.testkit.ImplicitSender
 import akka.testkit.TestProbe
 
 object DistributedWorkerSpec {
-  class FlakyWorkExecutor extends Actor {
+  /*class FlakyWorkExecutor extends Actor {
     var i = 0
 
     override def postRestart(reason: Throwable): Unit = {
@@ -95,6 +95,6 @@ class DistributedWorkerSpec(_system: ActorSystem)
       ids.toVector.map(_.toInt).sorted should be((2 to 100).toVector)
     }
 
-  }
+  }*/
 
 }
