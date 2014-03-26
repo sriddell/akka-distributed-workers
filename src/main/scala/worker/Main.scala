@@ -14,12 +14,33 @@ import akka.contrib.pattern.ClusterSingletonManager
 object Main extends Startup {
 
   def main(args: Array[String]): Unit = {
+    val systemType = args(0)
+    var joinAddress: akka.actor.Address = null
+    if (args.length > 1) {
+        var port:Int = args(2).toInt
+        joinAddress = akka.actor.Address("akka.tcp","Workers",args(1),port)
+    }
+    if (systemType == "backend") {
+        if (joinAddress != null) {
+            startBackend(Some(joinAddress),"backend")
+        } else {
+            val addr = startBackend(None,"backend")
+            println("Started on " + addr)
+        }
+    }
+    if (systemType == "worker") {
+        startWorker(joinAddress)
+    }
+    if (systemType == "frontEnd") {
+        startFrontend(joinAddress)
+    }
+    /*
     val joinAddress = startBackend(None, "backend")
     Thread.sleep(5000)
     startBackend(Some(joinAddress), "backend")
     startWorker(joinAddress)
     Thread.sleep(5000)
-    startFrontend(joinAddress)
+    startFrontend(joinAddress)*/
   }
 
 }
