@@ -41,7 +41,7 @@ trait Startup {
   }
 
   def startWorker(contactAddress: akka.actor.Address): Unit = {
-    val system = ActorSystem(systemName)
+    val system = ActorSystem("justtheworkers")
     val initialContacts = Set(
       system.actorSelection(RootActorPath(contactAddress) / "user" / "receptionist"))
     val clusterClient = system.actorOf(ClusterClient.props(initialContacts), "clusterClient")

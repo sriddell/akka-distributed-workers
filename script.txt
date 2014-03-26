@@ -1,0 +1,20 @@
+import akka.actor._
+import akka.cluster._
+import com.typesafe.config._
+import worker._
+
+
+
+
+val joinAddress = worker.Main.startBackend(None,"backend")
+
+
+
+
+val joinAddress = akka.actor.Address("akka.tcp","Workers","172.16.42.4",59478)
+worker.Main.startBackend(Some(joinAddress),"backend")
+
+
+
+Works with all parts started in different consoles.
+Need to modify cluster settings to auto-drop nodes after 10 secs
