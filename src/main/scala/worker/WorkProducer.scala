@@ -11,7 +11,7 @@ object WorkProducer {
   case object Tick
 }
 
-class WorkProducer(frontend: ActorRef) extends Actor with ActorLogging {
+class WorkProducer(frontend: ActorRef, tracker: ActorRef) extends Actor with ActorLogging {
   import WorkProducer._
   import context.dispatcher
   import context._
@@ -21,13 +21,15 @@ class WorkProducer(frontend: ActorRef) extends Actor with ActorLogging {
 
   var n = 0
 
-  override def preStart(): Unit =
-    scheduler.scheduleOnce(5.seconds, self, Tick)
-
-  // override postRestart so we don't call preStart and schedule a new Tick
-  override def postRestart(reason: Throwable): Unit = ()
-
   def receive = producing
+
+  tracker ! ProducerTracker.ILive
+  self ! Tick
+
+  override def postStop(): Unit = {
+    tracker ! ProducerTracker.IDie
+    super.postStop()
+  }
 
   def producing: Receive = {
     case Tick =>
@@ -37,7 +39,6 @@ class WorkProducer(frontend: ActorRef) extends Actor with ActorLogging {
       frontend ! work
       //context.become(waitAccepted(work), discardOld = false)
       context.become(waitAccepted(work))
-
   }
 
   def waitAccepted(work: Work): Receive = {

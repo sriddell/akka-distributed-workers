@@ -73,9 +73,10 @@ trait Startup {
     val system = ActorSystem(systemName)
     Cluster(system).join(joinAddress)
     val frontend = system.actorOf(Props[Frontend], "frontend")
-    for (i <- 1 to 2000000) {
-        system.actorOf(Props(classOf[WorkProducer], frontend), "producer-" + i)
-        Thread.sleep(100)
+    val tracker = system.actorOf(Props[ProducerTracker], "tracker")
+    for (i <- 1 to 200000) {
+        system.actorOf(Props(classOf[WorkProducer], frontend, tracker), "producer-" + i)
+        Thread.sleep(1)
     }
     //system.actorOf(Props[WorkResultConsumer], "consumer")
   }
