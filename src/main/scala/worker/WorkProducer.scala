@@ -51,8 +51,9 @@ class WorkProducer(frontend: ActorRef) extends Actor with ActorLogging {
   def waitResult: Receive = {
     case WorkResult(workId, result) => {
       log.info("Received result: {}", result)
-      context.become(producing)
-      scheduler.scheduleOnce(rnd.nextInt(3, 10).seconds, self, Tick)
+      stop(self)
+      //context.become(producing)
+      //scheduler.scheduleOnce(rnd.nextInt(3, 10).seconds, self, Tick)
     }
   }
 
