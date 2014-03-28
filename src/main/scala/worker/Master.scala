@@ -2,6 +2,7 @@ package worker
 
 import scala.collection.immutable.Queue
 import akka.actor.Actor
+import akka.actor.Terminated
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.contrib.pattern.DistributedPubSubExtension
@@ -26,12 +27,14 @@ object Master {
   private case class WorkerState(ref: ActorRef, status: WorkerStatus, respondTo: ActorRef)
 
   private case object CleanupTick
+  private case object StatsTick
 
 }
 
 class Master(workTimeout: FiniteDuration) extends Actor with ActorLogging {
   import Master._
   import MasterWorkerProtocol._
+  import scala.concurrent.duration._
   val mediator = DistributedPubSubExtension(context.system).mediator
 
   mediator ! Put(self)
@@ -44,8 +47,12 @@ class Master(workTimeout: FiniteDuration) extends Actor with ActorLogging {
   import context.dispatcher
   val cleanupTask = context.system.scheduler.schedule(workTimeout / 2, workTimeout / 2,
     self, CleanupTick)
+  val statsTask = context.system.scheduler.schedule(0.seconds, 5.seconds, self, StatsTick)
 
-  override def postStop(): Unit = cleanupTask.cancel()
+  override def postStop(): Unit = {
+    cleanupTask.cancel()
+    statsTask.cancel()
+  }
 
   def receive = {
     case RegisterWorker(workerId) =>
@@ -53,10 +60,29 @@ class Master(workTimeout: FiniteDuration) extends Actor with ActorLogging {
         workers += (workerId -> workers(workerId).copy(ref = sender))
       } else {
         log.debug("Worker registered: {}", workerId)
+        println("Registering worker" + sender())
         workers += (workerId -> WorkerState(sender, status = Idle, respondTo = null))
+        context.watch(sender)
         if (pendingWork.nonEmpty)
           sender ! WorkIsReady
       }
+
+    case Terminated(worker) => {
+      //this is really ineffecient
+      //need to look at changing the keys of workers to being ActorRef of the
+      //worker directly.
+      var oldKey: String = null
+      workers.foreach {
+        case (key,value) =>
+          if (value.ref == worker) {
+            oldKey = key
+          }
+      }
+
+      if (oldKey != null) {
+        workers -= oldKey
+      }
+    }
 
     case WorkerRequestsWork(workerId) =>
       if (pendingWork.nonEmpty) {
@@ -126,6 +152,10 @@ class Master(workTimeout: FiniteDuration) extends Actor with ActorLogging {
           notifyWorkers()
         }
       }
+    case StatsTick => {
+        println("Registered workers:" + workers.keySet.size)
+        println("Pending work size:" + pendingWork.length)
+    }
   }
 
   def notifyWorkers(): Unit =

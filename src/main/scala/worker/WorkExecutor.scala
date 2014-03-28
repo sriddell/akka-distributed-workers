@@ -8,6 +8,7 @@ class WorkExecutor extends Actor {
     case n: Int =>
       val n2 = n * n
       val result = s"$n * $n = $n2"
+      Thread.sleep(10)
       sender ! Worker.WorkComplete(result)
   }
 

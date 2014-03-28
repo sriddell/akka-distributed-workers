@@ -58,6 +58,7 @@ trait Startup {
     Cluster(system).join(joinAddress)
     system.actorOf(ClusterSingletonManager.props(Master.props(workTimeout), "active",
       PoisonPill, Some(role)), "master")
+    println("backend running at " + Cluster(system).selfAddress)
     joinAddress
   }
 
@@ -66,7 +67,9 @@ trait Startup {
     val initialContacts = Set(
       system.actorSelection(RootActorPath(contactAddress) / "user" / "receptionist"))
     val clusterClient = system.actorOf(ClusterClient.props(initialContacts), "clusterClient")
-    system.actorOf(Worker.props(clusterClient, Props[WorkExecutor]), "worker")
+    for (i <- 1 to 10) {
+        system.actorOf(Worker.props(clusterClient, Props[WorkExecutor]), "worker-" + i)
+    }
   }
 
   def startFrontend(joinAddress: akka.actor.Address): Unit = {

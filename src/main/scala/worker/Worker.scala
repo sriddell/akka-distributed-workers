@@ -61,6 +61,7 @@ class Worker(clusterClient: ActorRef, workExecutorProps: Props, registerInterval
 
     case Work(workId, job) =>
       log.debug("Got work: {}", job)
+println("Worker " + workerId + " doing job " + workId)
       currentWorkId = Some(workId)
       workExecutor ! job
       context.become(working)
